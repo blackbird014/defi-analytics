@@ -1,0 +1,20 @@
+defi-analytics/
+├── src/
+│   ├── indexer/
+│   │   ├── injective.py
+│   │   └── interfaces.py
+│   ├── analysis/
+│   │   ├── mispricing.py
+│   │   └── metrics.py
+│   ├── agents/
+│   │   ├── reporter.py
+│   │   └── monitor.py
+│   ├── allora/
+│   │   ├── predictor.py
+│   │   └── models.py
+│   └── output/
+│       ├── formatters.py
+│       └── publishers.py
+├── config/
+│   └── settings.yaml
+└── README.md 
