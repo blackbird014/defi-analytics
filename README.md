@@ -44,20 +44,33 @@ defi-analytics/
 - Injective Protocol API access
 - Allora API credentials
 
-### Installation
+### Setting up Development Environment
 
-1. Clone the repository: 
+1. Create and activate a virtual environment:
+
+```bash
+# Create virtual environment
+python -m venv venv
+
+# Activate virtual environment
+# On Windows:
+venv\Scripts\activate
+# On macOS/Linux:
+source venv/bin/activate
+```
+
+2. Clone the repository: 
 ```bash
 git clone https://github.com/yourusername/defi-analytics.git
 cd defi-analytics
 ```
 
-2. Install dependencies:
+3. Install dependencies:
 ```bash
 pip install -r requirements.txt
 ```
 
-3. Configure your settings in `config/settings.yaml`:
+4. Configure your settings in `config/settings.yaml`:
 ```yaml
 injective:
   network: "mainnet"
@@ -131,6 +144,82 @@ python -m defi_analytics.agents.monitor
   }
 }
 ```
+
+## 🧪 Testing
+
+The project uses pytest for testing. The test suite includes both unit and integration tests.
+
+### Test Structure
+
+```
+tests/
+├── unit/               # Unit tests for individual components
+│   ├── indexer/       # Tests for indexer modules
+│   ├── analysis/      # Tests for analysis modules
+│   ├── agents/        # Tests for agent modules
+│   └── allora/        # Tests for Allora integration
+│       ├── test_predictor.py
+│       └── test_client.py
+└── integration/       # End-to-end integration tests
+```
+
+### Running Tests
+
+1. Make sure you're in your virtual environment:
+```bash
+# On Windows:
+venv\Scripts\activate
+# On macOS/Linux:
+source venv/bin/activate
+```
+
+2. Install test dependencies:
+```bash
+pip install -r requirements.txt
+```
+
+3. Run tests:
+
+```bash
+# Run all tests
+pytest
+
+# Run only unit tests
+pytest tests/unit
+
+# Run only integration tests
+pytest tests/integration
+
+# Run tests for specific component
+pytest tests/unit/allora
+
+# Run with coverage report
+pytest --cov=src tests/
+
+# Run with verbose output
+pytest -v
+
+# Run tests and generate HTML coverage report
+pytest --cov=src --cov-report=html tests/
+```
+
+### Writing Tests
+
+When writing new tests:
+1. Place them in the appropriate directory under `tests/`
+2. Use fixtures from `conftest.py` when possible
+3. Follow the existing naming conventions
+4. Include both positive and negative test cases
+5. Mock external dependencies
+
+### Test Configuration
+
+The test suite uses several pytest plugins:
+- `pytest-asyncio` for testing async code
+- `pytest-mock` for mocking
+- `pytest-cov` for coverage reporting
+
+Configure test settings in `pytest.ini` if needed.
 
 ## 🤝 Contributing
 

@@ -1,7 +1,9 @@
 from dataclasses import dataclass
-from typing import List, Dict
+from typing import List, Dict, Any
 import json
 import asyncio
+from datetime import datetime
+from ..analysis.mispricing import MispricingOpportunity, MispricingAnalyzer
 
 @dataclass
 class MispricingReport:
@@ -12,13 +14,9 @@ class MispricingReport:
     metadata: Dict[str, Any]
 
 class MispricingReporter:
-    def __init__(
-        self, 
-        analyzer: MispricingAnalyzer,
-        output_format: str = "json"
-    ):
+    def __init__(self, analyzer: MispricingAnalyzer):
+        # Takes an analyzer to generate reports
         self.analyzer = analyzer
-        self.output_format = output_format
 
     async def generate_report(
         self, 
