@@ -1,80 +1,142 @@
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
+from datetime import datetime, timedelta
 from pyinjective.composer import Composer
 from pyinjective.wallet import Address
-from app.interfaces.iagent import IAgent
 
-class ExampleInjectiveAgent(IAgent):
-    def __init__(self):
-        self.composer = None
-        self.address = None
-        self.market_id = None  # Set this based on your target market
+from src.config import Config, MarketConfig
+from src.allora.predictor import AlloraPredictor
+from src.allora.interfaces import PricePoint
+from .base_agent import BaseAgent
 
-    async def initialize(self, composer: Composer, address: Address) -> None:
-        self.composer = composer
-        self.address = address
-        # Additional initialization logic
+class ExampleInjectiveAgent(BaseAgent):
+    def __init__(self, config: Config, market_config: MarketConfig):
+        """Initialize the example agent with configuration and Allora predictor"""
+        super().__init__(config, market_config)
+        self.allora_predictor = AlloraPredictor(
+            model_config={
+                "api_key": config.allora.api_key,
+                "model_id": config.allora.model_id,
+                "base_url": config.allora.base_url,
+                "confidence_level": config.allora.confidence_level
+            }
+        )
+        self.historical_prices: List[PricePoint] = []
 
     async def execute(self) -> None:
-        # Get market state
-        market_state = await self.get_market_state()
+        """Execute trading strategy using Allora predictions"""
+        try:
+            # Get current market state
+            market_state = await self.get_market_state()
+            current_price = self._get_mid_price(market_state["orderbook"])
+            
+            # Update historical prices
+            self._update_historical_prices(current_price)
+            
+            # Get Allora prediction
+            prediction = await self.allora_predictor.predict_price_movement(
+                self.historical_prices,
+                market_state
+            )
+            
+            # Check if prediction meets confidence threshold
+            if prediction["confidence"] < self.config.allora.prediction_settings.min_confidence:
+                self.logger.info(f"Prediction confidence {prediction['confidence']} below threshold")
+                return
+            
+            # Determine trade direction and size
+            if self._should_place_order(prediction, current_price):
+                order_params = self._create_order_params(
+                    prediction, 
+                    current_price,
+                    market_state
+                )
+                await self.place_order(order_params)
         
-        # Implement your trading logic here
-        # Example: Place a buy order if certain conditions are met
-        if self._should_place_order(market_state):
-            order_params = {
-                "market_id": self.market_id,
-                "subaccount_id": self.address.get_subaccount_id(),
-                "fee_recipient": self.address.to_acc_bech32(),
-                # Add other order parameters
-            }
-            await self.place_order(order_params)
+        except Exception as e:
+            self.logger.error(f"Error in execute: {e}")
 
-    async def get_market_state(self) -> Dict[str, Any]:
-        if not self.composer:
-            raise ValueError("Agent not initialized")
+    def _update_historical_prices(self, current_price: float) -> None:
+        """Update historical price list for predictions"""
+        current_point = PricePoint(
+            timestamp=datetime.now(),
+            price=current_price,
+            volume=0.0,  # We don't have volume data in this example
+            pair=self.market_config.id
+        )
         
-        # Fetch relevant market data
-        orderbook = await self.composer.fetch_spot_orderbook(self.market_id)
-        # Add other market state data you need
+        # Keep only recent history based on prediction time horizon
+        cutoff_time = datetime.now() - timedelta(
+            seconds=self.config.allora.prediction_settings.time_horizon
+        )
+        
+        self.historical_prices = [
+            point for point in self.historical_prices 
+            if point.timestamp > cutoff_time
+        ]
+        self.historical_prices.append(current_point)
+
+    def _should_place_order(
+        self, 
+        prediction: Dict[str, Any],
+        current_price: float
+    ) -> bool:
+        """Determine if we should place an order based on prediction"""
+        price_change = (prediction["predicted_price"] - current_price) / current_price
+        min_profit = self.config.monitoring.min_profit_threshold
+        
+        # Only trade if predicted profit exceeds threshold
+        return abs(price_change) > min_profit
+
+    def _create_order_params(
+        self,
+        prediction: Dict[str, Any],
+        current_price: float,
+        market_state: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Create order parameters based on prediction"""
+        is_buy = prediction["predicted_price"] > current_price
+        
+        # Calculate position size based on confidence and risk parameters
+        base_size = (
+            self.market_config.risk_parameters.max_position_size * 
+            prediction["confidence"]
+        )
+        
+        # Adjust size based on available liquidity
+        size = min(
+            base_size,
+            self.market_config.max_trade_size,
+            self._get_available_liquidity(market_state["orderbook"], is_buy)
+        )
+        
         return {
-            "orderbook": orderbook,
-            # Add other state information
+            "price": current_price,
+            "size": size,
+            "type": "LIMIT",
+            "is_buy": is_buy
         }
 
-    async def place_order(self, order_params: Dict[str, Any]) -> Optional[str]:
-        if not self.composer:
-            raise ValueError("Agent not initialized")
+    def _get_mid_price(self, orderbook: Dict[str, Any]) -> float:
+        """Calculate mid price from orderbook"""
+        best_bid = float(orderbook["bids"][0]["price"]) if orderbook["bids"] else 0
+        best_ask = float(orderbook["asks"][0]["price"]) if orderbook["asks"] else 0
         
-        try:
-            # Implement order placement logic using composer
-            tx_hash = await self.composer.submit_spot_order(
-                # Add order parameters
-            )
-            return tx_hash
-        except Exception as e:
-            print(f"Error placing order: {e}")
-            return None
+        if not best_bid or not best_ask:
+            raise ValueError("Invalid orderbook state")
+            
+        return (best_bid + best_ask) / 2
 
-    async def cancel_order(self, order_id: str) -> bool:
-        if not self.composer:
-            raise ValueError("Agent not initialized")
-        
-        try:
-            await self.composer.cancel_spot_order(
-                market_id=self.market_id,
-                order_id=order_id
-            )
-            return True
-        except Exception as e:
-            print(f"Error cancelling order: {e}")
-            return False
+    def _get_available_liquidity(
+        self, 
+        orderbook: Dict[str, Any], 
+        is_buy: bool
+    ) -> float:
+        """Calculate available liquidity for the trade"""
+        orders = orderbook["asks"] if is_buy else orderbook["bids"]
+        return sum(float(order["quantity"]) for order in orders[:3])  # Look at top 3 levels
 
     def get_name(self) -> str:
-        return "Example Injective Agent"
+        return f"Example Injective Agent - {self.market_config.id}"
 
     def get_description(self) -> str:
-        return "An example agent implementing the Injective Protocol v2.0 interface"
-
-    def _should_place_order(self, market_state: Dict[str, Any]) -> bool:
-        # Implement your order decision logic here
-        return False  # Default to false for safety 
+        return "An example agent implementing the Injective Protocol with Allora predictions" 

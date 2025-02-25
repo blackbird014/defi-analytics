@@ -54,25 +54,27 @@ class AlloraPredictor(PricePredictor):
         ]
 
         try:
-            async with AlloraClient(self.api_key, self.base_url) as client:
-                prediction = await client.get_price_prediction(
-                    self.model_id,
-                    formatted_data,
-                    current_state
-                )
-                
-                confidence_interval = self.get_confidence_interval(
-                    prediction["predicted_price"],
-                    current_state
-                )
-                
-                return {
-                    "predicted_price": prediction["predicted_price"],
-                    "confidence": prediction["confidence"],
-                    "direction": "up" if prediction["predicted_price"] > historical_data[-1].price else "down",
-                    "timestamp": datetime.now(),
-                    "confidence_interval": confidence_interval
-                }
+            client = AlloraClient(self.api_key, self.base_url)
+            prediction = await client.get_price_prediction(
+                self.model_id,
+                formatted_data,
+                current_state
+            )
+            
+            confidence_interval = self.get_confidence_interval(
+                prediction["predicted_price"],
+                current_state
+            )
+            
+            await client.close()
+            
+            return {
+                "predicted_price": prediction["predicted_price"],
+                "confidence": prediction["confidence"],
+                "direction": "up" if prediction["predicted_price"] > historical_data[-1].price else "down",
+                "timestamp": datetime.now(),
+                "confidence_interval": confidence_interval
+            }
                 
         except Exception as e:
             raise Exception(f"Failed to get prediction from Allora: {str(e)}")

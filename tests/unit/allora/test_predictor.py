@@ -1,5 +1,6 @@
 import pytest
 from datetime import datetime, timedelta
+from unittest.mock import AsyncMock, MagicMock, patch
 from src.allora.predictor import AlloraPredictor
 from src.allora.interfaces import PricePoint
 
@@ -31,6 +32,12 @@ def market_conditions():
         "trading_volume": 1000000.0
     }
 
+@pytest.fixture
+def mock_allora_client():
+    mock = AsyncMock()
+    mock.get_price_prediction = AsyncMock()
+    return mock
+
 @pytest.mark.asyncio
 async def test_predictor_initialization(allora_config):
     predictor = AlloraPredictor(allora_config)
@@ -42,29 +49,31 @@ async def test_predictor_initialization(allora_config):
 async def test_price_prediction(
     allora_config,
     sample_price_points,
-    market_conditions,
-    mock_allora_client,
-    monkeypatch
+    market_conditions
 ):
-    # Mock the AlloraClient
-    mock_prediction = {
-        "predicted_price": 150.0,
-        "confidence": 0.85
-    }
-    mock_allora_client.get_price_prediction.return_value = mock_prediction
+    with patch('src.allora.predictor.AlloraClient') as mock_client_class:
+        # Setup mock client
+        mock_client = AsyncMock()
+        mock_prediction = {
+            "predicted_price": 150.0,
+            "confidence": 0.85
+        }
+        mock_client.get_price_prediction.return_value = mock_prediction
+        mock_client_class.return_value = mock_client
+        mock_client.__aenter__.return_value = mock_client
 
-    predictor = AlloraPredictor(allora_config)
-    
-    result = await predictor.predict_price_movement(
-        sample_price_points,
-        market_conditions
-    )
-    
-    assert result["predicted_price"] == 150.0
-    assert result["confidence"] == 0.85
-    assert "direction" in result
-    assert "confidence_interval" in result
-    assert isinstance(result["confidence_interval"], tuple)
+        predictor = AlloraPredictor(allora_config)
+        
+        result = await predictor.predict_price_movement(
+            sample_price_points,
+            market_conditions
+        )
+        
+        assert result["predicted_price"] == 150.0
+        assert result["confidence"] == 0.85
+        assert "direction" in result
+        assert isinstance(result["direction"], str)
+        mock_client.get_price_prediction.assert_called_once()
 
 @pytest.mark.asyncio
 async def test_confidence_interval(allora_config, market_conditions):
@@ -81,13 +90,20 @@ async def test_confidence_interval(allora_config, market_conditions):
 async def test_error_handling(
     allora_config,
     sample_price_points,
-    market_conditions,
-    mock_allora_client
+    market_conditions
 ):
-    mock_allora_client.get_price_prediction.side_effect = Exception("API Error")
-    
-    predictor = AlloraPredictor(allora_config)
-    
-    with pytest.raises(Exception) as exc_info:
-        await predictor.predict_price_movement(sample_price_points, market_conditions)
-    assert "Failed to get prediction from Allora" in str(exc_info.value) 
+    with patch('src.allora.predictor.AlloraClient') as mock_client_class:
+        # Setup mock client with error
+        mock_client = AsyncMock()
+        mock_client.get_price_prediction.side_effect = Exception("API Error")
+        mock_client_class.return_value = mock_client
+        mock_client.__aenter__.return_value = mock_client
+        
+        predictor = AlloraPredictor(allora_config)
+        
+        with pytest.raises(Exception) as exc_info:
+            await predictor.predict_price_movement(
+                sample_price_points,
+                market_conditions
+            )
+        assert "Failed to get prediction from Allora" in str(exc_info.value) 

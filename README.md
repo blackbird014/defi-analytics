@@ -4,36 +4,52 @@ A modular framework for analyzing DEX mispricing opportunities using Injective P
 
 ## 🌟 Features
 
-- Real-time price monitoring across multiple DEXes via Injective Indexer
-- Advanced mispricing detection algorithms
-- Integration with Allora for price movement predictions
-- Configurable reporting system with multiple output formats
-- Modular architecture for easy extension
-- Async-first design for optimal performance
+### Implemented Features
+- ✅ Real-time price monitoring via Injective Indexer
+- ✅ Integration with Allora for price movement predictions
+- ✅ Configurable trading agent framework
+- ✅ Advanced resource management and monitoring
+- ✅ Comprehensive logging system
+- ✅ Automated risk management
+
+### Planned Features (Not Yet Implemented)
+- ⏳ Advanced mispricing detection algorithms
+- ⏳ Multi-DEX support
+- ⏳ Performance analytics dashboard
+- ⏳ Machine learning model integration for custom predictions
+- ⏳ Backtesting framework
 
 ## 🏗️ Project Structure 
 
 ```
 defi-analytics/
 ├── src/
-│   ├── indexer/              # Data collection from DEXes
-│   │   ├── injective.py      # Injective Protocol integration
-│   │   └── interfaces.py     # Abstract interfaces for indexers
-│   ├── analysis/             # Analysis modules
-│   │   ├── mispricing.py     # Mispricing detection logic
-│   │   └── metrics.py        # Performance metrics calculation
-│   ├── agents/               # Autonomous agents
-│   │   ├── reporter.py       # Report generation
-│   │   └── monitor.py        # Continuous monitoring
-│   ├── allora/               # Allora integration
-│   │   ├── predictor.py      # Price prediction logic
-│   │   └── models.py         # ML model configurations
-│   └── output/               # Output formatting
-│       ├── formatters.py     # Data formatting utilities
-│       └── publishers.py     # Publishing to different platforms
+│   ├── agents/
+│   │   ├── base_agent.py         # Base trading agent implementation
+│   │   └── example_injective_agent.py  # Example Injective-specific agent
+│   ├── config/
+│   │   ├── __init__.py          # Configuration exports
+│   │   └── config_loader.py      # Configuration management
+│   ├── interfaces/
+│   │   └── iagent.py            # Core interface definitions
+│   ├── indexer/
+│   │   ├── injective.py         # Injective Protocol integration
+│   │   └── interfaces.py        # Indexer interfaces
+│   ├── allora/
+│   │   ├── predictor.py         # Price prediction logic
+│   │   ├── interfaces.py        # Prediction interfaces
+│   │   └── client.py           # Allora API client
+│   └── run_agent.py             # Main runner script with resource management
+├── tests/
+│   ├── unit/
+│   │   ├── agents/              # Agent unit tests
+│   │   ├── config/              # Configuration tests
+│   │   ├── allora/              # Allora integration tests
+│   │   └── indexer/             # Indexer tests
+│   └── conftest.py              # Test fixtures and utilities
 ├── config/
-│   └── settings.yaml         # Configuration settings
-└── README.md
+│   └── settings.yaml            # Application configuration
+└── pyproject.toml              # Project metadata and dependencies
 ```
 
 ## 🚀 Getting Started
@@ -43,11 +59,12 @@ defi-analytics/
 - Python 3.9+
 - Injective Protocol API access
 - Allora API credentials
+- At least 2GB available RAM
+- Stable internet connection
 
 ### Setting up Development Environment
 
 1. Create and activate a virtual environment:
-
 ```bash
 # Create virtual environment
 python -m venv venv
@@ -59,182 +76,140 @@ venv\Scripts\activate
 source venv/bin/activate
 ```
 
-2. Clone the repository: 
+2. Clone the repository and install dependencies:
 ```bash
 git clone https://github.com/yourusername/defi-analytics.git
 cd defi-analytics
+pip install -e ".[test]"  # Installs with test dependencies
 ```
 
-3. Install dependencies:
-```bash
-pip install -r requirements.txt
-```
-
-4. Configure your settings in `config/settings.yaml`:
+3. Configure your settings in `config/settings.yaml`:
 ```yaml
 injective:
-  network: "mainnet"
-  api_key: "your_api_key"
+  network: "testnet"  # Use "mainnet" for production
+  api_key: "your_injective_api_key"
+  markets:
+    - id: "INJ/USDT"
+      min_trade_size: 100
+      max_trade_size: 10000
+      risk_parameters:
+        max_position_size: 5000
+        max_slippage: 0.01  # 1%
+        stop_loss: 0.02     # 2%
 
 allora:
-  model_id: "price_prediction_v1"
   api_key: "your_allora_api_key"
+  model_id: "price_prediction_v1"
+  base_url: "https://api.allora.com/v1"
+  confidence_level: 0.95
+  prediction_settings:
+    min_confidence: 0.8
+    time_horizon: 3600  # 1 hour prediction window
+    update_interval: 300  # Update predictions every 5 minutes
 
 monitoring:
   update_interval: 60  # seconds
-  token_pairs:
-    - "INJ/USDT"
-    - "ETH/USDT"
-    # Add more pairs as needed
+  min_profit_threshold: 0.01  # 1% minimum profit target
+  max_active_positions: 3
+  risk_management:
+    portfolio_stop_loss: 0.05  # 5% portfolio stop loss
+    max_daily_trades: 50
+    cooldown_period: 300  # 5 minutes after a loss
+
+logging:
+  level: "INFO"
+  file_path: "logs/trading.log"
+  rotation: "1 day"
+  retention: "30 days"
 ```
 
-## 📊 Usage
+## 🔄 Resource Management
 
-### Basic Usage
+The framework includes comprehensive resource management features:
 
-```python
-from defi_analytics.indexer import InjectiveIndexer
-from defi_analytics.analysis import MispricingAnalyzer
-from defi_analytics.agents import MispricingReporter
-from defi_analytics.allora import AlloraPredictor
+### Memory Management
+- Automatic memory monitoring (warning threshold: 1000MB)
+- Garbage collection optimization
+- Historical data pruning
+- Resource cleanup on shutdown
 
-# Initialize components
-indexer = InjectiveIndexer()
-predictor = AlloraPredictor(model_config={...})
-analyzer = MispricingAnalyzer([indexer], predictor)
-reporter = MispricingReporter(analyzer)
+### Performance Monitoring
+- Execution time tracking per agent
+- Performance degradation detection
+- Automatic warning system
+- Resource usage statistics
 
-# Generate report
-report = await reporter.generate_report(["INJ/USDT"])
-print(report.format_report())
-```
+### Error Handling
+- Exponential backoff (5s to 5min)
+- Circuit breaker implementation
+- Graceful shutdown handling
+- Proper task cancellation
 
-### Running the Monitor
+### Logging System
+- Rotating log files (10MB per file)
+- Console and file logging
+- Structured log format
+- Automatic log directory creation
 
+## 🚀 Running the Agent
+
+1. Ensure your configuration is set up in `config/settings.yaml`
+
+2. Run the agent:
 ```bash
-python -m defi_analytics.agents.monitor
+python src/run_agent.py <your_private_key>
 ```
 
-## 📈 Output Example
+### Monitoring Your Agent
 
-```json
-{
-  "timestamp": "2024-03-14T12:00:00Z",
-  "opportunities": [
-    {
-      "token_pair": "INJ/USDT",
-      "dex_a": "Injective",
-      "dex_b": "OtherDEX",
-      "price_difference": 0.015,
-      "confidence": 0.95,
-      "estimated_profit": 120.50,
-      "liquidity_constraints": {
-        "max_trade_size": 10000,
-        "slippage_estimate": 0.001
-      }
-    }
-  ],
-  "market_conditions": {
-    "volatility": "medium",
-    "trend": "upward"
-  },
-  "predictions": {
-    "price_direction": "up",
-    "confidence_interval": [45.2, 46.8]
-  }
-}
-```
+Monitor your agent through:
+1. Console output (real-time logs)
+2. Log files at `logs/trading.log`
+3. Memory usage warnings (if approaching 1000MB)
+4. Performance alerts in logs
+
+### Stopping the Agent
+
+To stop the agent:
+- Press Ctrl+C for graceful shutdown
+- The agent will complete pending operations and clean up resources
 
 ## 🧪 Testing
 
-The project uses pytest for testing. The test suite includes both unit and integration tests.
-
-### Test Structure
-
-```
-tests/
-├── unit/               # Unit tests for individual components
-│   ├── indexer/       # Tests for indexer modules
-│   ├── analysis/      # Tests for analysis modules
-│   ├── agents/        # Tests for agent modules
-│   └── allora/        # Tests for Allora integration
-│       ├── test_predictor.py
-│       └── test_client.py
-└── integration/       # End-to-end integration tests
-```
-
-### Running Tests
-
-1. Make sure you're in your virtual environment:
-```bash
-# On Windows:
-venv\Scripts\activate
-# On macOS/Linux:
-source venv/bin/activate
-```
-
-2. Install test dependencies:
-```bash
-pip install -r requirements.txt
-```
-
-3. Run tests:
+Run the test suite:
 
 ```bash
-# Run all tests
-pytest
+# Basic test run
+pytest tests/
 
-# Run only unit tests
-pytest tests/unit
+# With coverage report
+pytest --cov=src --cov-report=term-missing tests/
 
-# Run only integration tests
-pytest tests/integration
-
-# Run tests for specific component
-pytest tests/unit/allora
-
-# Run with coverage report
-pytest --cov=src tests/
-
-# Run with verbose output
-pytest -v
-
-# Run tests and generate HTML coverage report
+# Generate HTML coverage report
 pytest --cov=src --cov-report=html tests/
 ```
 
-### Writing Tests
+## ⚠️ Known Limitations
 
-When writing new tests:
-1. Place them in the appropriate directory under `tests/`
-2. Use fixtures from `conftest.py` when possible
-3. Follow the existing naming conventions
-4. Include both positive and negative test cases
-5. Mock external dependencies
+1. Currently only supports Injective Protocol
+2. Single agent per market
+3. Limited to spot trading
+4. No automated backtesting
+5. Memory-only state management (no persistence)
 
-### Test Configuration
+## 🔒 Security Considerations
 
-The test suite uses several pytest plugins:
-- `pytest-asyncio` for testing async code
-- `pytest-mock` for mocking
-- `pytest-cov` for coverage reporting
-
-Configure test settings in `pytest.ini` if needed.
+1. Store API keys securely (not in config files)
+2. Monitor system resources regularly
+3. Set appropriate risk parameters
+4. Review logs for unusual activity
+5. Keep dependencies updated
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## 📝 License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## 🙏 Acknowledgments
-
-- Injective Protocol team for their excellent indexer
-- Allora team for their prediction models
-- The DeFi community for continuous inspiration
-
-## ⚠️ Disclaimer
-
-This software is for educational purposes only. Always perform your own research and risk assessment before trading.
+Contributions are welcome! Please:
+1. Fork the repository
+2. Create a feature branch
+3. Add tests for new features
+4. Ensure all tests pass
+5. Submit a pull request

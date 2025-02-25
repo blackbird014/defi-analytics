@@ -1,0 +1,35 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "defi-analytics"
+version = "0.1.0"
+dependencies = [
+    "aiohttp>=3.8.0",
+    "pyyaml>=6.0.0",
+    "pandas>=2.0.0",
+    "numpy>=1.24.0",
+    "injective-py>=0.5.0",
+    "allora-sdk @ git+https://github.com/allora-network/allora-sdk-py.git",
+    "psutil>=5.8.0",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.20.0",
+    "pytest-cov>=4.1.0",
+    "pytest-mock>=3.10.0",
+]
+
+[tool.pytest.ini_options]
+pythonpath = [
+    "."
+]
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"] 
