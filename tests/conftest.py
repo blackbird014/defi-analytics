@@ -1,6 +1,5 @@
 import pytest
 from unittest.mock import Mock
-import asyncio
 
 @pytest.fixture
 def mock_injective_client():
@@ -34,11 +33,4 @@ def sample_market_data():
             "volume": 5000000.0,
             "timestamp": "2024-03-14T12:00:00Z"
         }
-    }
-
-@pytest.fixture
-def event_loop():
-    """Create an instance of the default event loop for each test case."""
-    loop = asyncio.get_event_loop_policy().new_event_loop()
-    yield loop
-    loop.close() 
+    } 
