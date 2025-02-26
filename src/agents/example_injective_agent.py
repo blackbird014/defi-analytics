@@ -4,26 +4,41 @@ from pyinjective.composer import Composer
 from pyinjective.wallet import Address
 
 from src.config import Config, MarketConfig
+from src.interfaces.ipredictor import IPredictor, PricePoint
 from src.allora.predictor import AlloraPredictor
-from src.allora.interfaces import PricePoint
 from .base_agent import BaseAgent
 
 class ExampleInjectiveAgent(BaseAgent):
-    def __init__(self, config: Config, market_config: MarketConfig):
-        """Initialize the example agent with configuration and Allora predictor"""
+    def __init__(
+        self, 
+        config: Config, 
+        market_config: MarketConfig,
+        predictor: Optional[IPredictor] = None
+    ):
+        """Initialize the example agent with configuration and predictor
+
+        Args:
+            config: Global configuration object
+            market_config: Market-specific configuration
+            predictor: Price prediction implementation (optional)
+        """
         super().__init__(config, market_config)
-        self.allora_predictor = AlloraPredictor(
-            model_config={
-                "api_key": config.allora.api_key,
-                "model_id": config.allora.model_id,
-                "base_url": config.allora.base_url,
-                "confidence_level": config.allora.confidence_level
-            }
-        )
+        
+        # Create default predictor if none provided
+        if predictor is None:
+            predictor = AlloraPredictor(
+                model_config={
+                    "api_key": config.allora.api_key,
+                    "model_id": config.allora.model_id,
+                    "base_url": config.allora.base_url,
+                    "confidence_level": config.allora.confidence_level
+                }
+            )
+        self.predictor = predictor
         self.historical_prices: List[PricePoint] = []
 
     async def execute(self) -> None:
-        """Execute trading strategy using Allora predictions"""
+        """Execute trading strategy using predictions"""
         try:
             # Get current market state
             market_state = await self.get_market_state()
@@ -32,8 +47,8 @@ class ExampleInjectiveAgent(BaseAgent):
             # Update historical prices
             self._update_historical_prices(current_price)
             
-            # Get Allora prediction
-            prediction = await self.allora_predictor.predict_price_movement(
+            # Get prediction
+            prediction = await self.predictor.predict_price_movement(
                 self.historical_prices,
                 market_state
             )
@@ -139,4 +154,4 @@ class ExampleInjectiveAgent(BaseAgent):
         return f"Example Injective Agent - {self.market_config.id}"
 
     def get_description(self) -> str:
-        return "An example agent implementing the Injective Protocol with Allora predictions" 
+        return "An example agent implementing the Injective Protocol with predictions" 

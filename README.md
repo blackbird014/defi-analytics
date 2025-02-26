@@ -11,6 +11,8 @@ A modular framework for analyzing DEX mispricing opportunities using Injective P
 - ✅ Advanced resource management and monitoring
 - ✅ Comprehensive logging system
 - ✅ Automated risk management
+- ✅ Interface-based architecture for modularity
+- ✅ HTTP and Blockchain client abstractions
 
 ### Planned Features (Not Yet Implemented)
 - ⏳ Advanced mispricing detection algorithms
@@ -27,29 +29,37 @@ defi-analytics/
 │   ├── agents/
 │   │   ├── base_agent.py         # Base trading agent implementation
 │   │   └── example_injective_agent.py  # Example Injective-specific agent
-│   ├── config/
-│   │   ├── __init__.py          # Configuration exports
-│   │   └── config_loader.py      # Configuration management
-│   ├── interfaces/
-│   │   └── iagent.py            # Core interface definitions
-│   ├── indexer/
-│   │   ├── injective.py         # Injective Protocol integration
-│   │   └── interfaces.py        # Indexer interfaces
 │   ├── allora/
-│   │   ├── predictor.py         # Price prediction logic
-│   │   ├── interfaces.py        # Prediction interfaces
-│   │   └── client.py           # Allora API client
-│   └── run_agent.py             # Main runner script with resource management
+│   │   ├── predictor.py         # Price prediction implementation
+│   │   ├── client.py           # Allora API client
+│   │   └── interfaces.py       # Prediction interfaces
+│   ├── blockchain/
+│   │   └── injective_client.py # Injective blockchain client implementation
+│   ├── config/
+│   │   ├── __init__.py        # Configuration exports
+│   │   └── config_loader.py    # Configuration management
+│   ├── http/
+│   │   └── aiohttp_client.py  # HTTP client implementation
+│   ├── indexer/
+│   │   ├── injective.py       # Injective Protocol integration
+│   │   └── interfaces.py      # Indexer interfaces
+│   ├── interfaces/
+│   │   ├── iagent.py         # Agent interface
+│   │   ├── ipredictor.py     # Predictor interface
+│   │   ├── ihttp_client.py   # HTTP client interface
+│   │   └── iblockchain_client.py # Blockchain client interface
+│   └── run_agent.py          # Main runner script with resource management
 ├── tests/
 │   ├── unit/
-│   │   ├── agents/              # Agent unit tests
-│   │   ├── config/              # Configuration tests
-│   │   ├── allora/              # Allora integration tests
-│   │   └── indexer/             # Indexer tests
-│   └── conftest.py              # Test fixtures and utilities
+│   │   ├── agents/           # Agent unit tests
+│   │   ├── allora/           # Allora integration tests
+│   │   ├── config/           # Configuration tests
+│   │   ├── http/            # HTTP client tests
+│   │   └── indexer/         # Indexer tests
+│   └── conftest.py          # Test fixtures and utilities
 ├── config/
-│   └── settings.yaml            # Application configuration
-└── pyproject.toml              # Project metadata and dependencies
+│   └── settings.yaml        # Application configuration
+└── pyproject.toml          # Project metadata and dependencies
 ```
 
 ## 🚀 Getting Started
@@ -213,3 +223,57 @@ Contributions are welcome! Please:
 3. Add tests for new features
 4. Ensure all tests pass
 5. Submit a pull request
+
+## 🏛️ Architecture
+
+The framework is built on a modular, interface-based architecture that promotes:
+
+### 1. Core Interfaces
+- `IAgent`: Base interface for trading agents
+- `IPredictor`: Interface for price prediction services
+- `IHttpClient`: Abstract HTTP client operations
+- `IBlockchainClient`: Abstract blockchain interactions
+
+### 2. Implementation Layers
+- **HTTP Layer**: Implements HTTP client interface using `aiohttp`
+- **Blockchain Layer**: Implements blockchain client interface for Injective Protocol
+- **Prediction Layer**: Implements prediction interface using Allora API
+- **Agent Layer**: Implements trading strategies using the base agent interface
+
+### 3. Resource Management
+- Memory monitoring and optimization
+- Automatic garbage collection
+- Performance tracking
+- Graceful error handling
+
+### 4. Configuration Management
+- YAML-based configuration
+- Environment-specific settings
+- Risk parameter management
+- API credentials management
+
+## 💻 Implementation Details
+
+### HTTP Client
+- Asynchronous HTTP operations using `aiohttp`
+- Automatic session management
+- Configurable retry logic
+- Error handling and logging
+
+### Blockchain Client
+- Injective Protocol integration
+- Market data fetching
+- Order management
+- Position tracking
+
+### Prediction Service
+- Integration with Allora API
+- Historical data processing
+- Confidence interval calculation
+- Market state analysis
+
+### Trading Agent
+- Risk management implementation
+- Order size calculation
+- Position management
+- Performance monitoring

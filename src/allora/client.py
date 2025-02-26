@@ -1,26 +1,19 @@
 from typing import Dict, Any, List
-import aiohttp
-from datetime import datetime
+from src.interfaces.ihttp_client import IHttpClient
+from src.http.aiohttp_client import AioHttpClient
 
 class AlloraClient:
-    def __init__(self, api_key: str, base_url: str = "https://api.allora.com/v1"):
+    def __init__(
+        self, 
+        api_key: str, 
+        base_url: str = "https://api.allora.com/v1",
+        http_client: IHttpClient = None
+    ):
         self.api_key = api_key
         self.base_url = base_url
-        self._session = None
-
-    @property
-    def session(self):
-        if self._session is None:
-            self._session = aiohttp.ClientSession(
-                headers={"Authorization": f"Bearer {self.api_key}"}
-            )
-        return self._session
-
-    async def close(self):
-        """Close the client session"""
-        if self._session:
-            await self._session.close()
-            self._session = None
+        self.http_client = http_client or AioHttpClient(
+            default_headers={"Authorization": f"Bearer {api_key}"}
+        )
 
     async def get_price_prediction(
         self,
@@ -36,9 +29,8 @@ class AlloraClient:
             "market_conditions": market_conditions
         }
 
-        response = await self.session.post(endpoint, json=payload)
-        if response.status != 200:
-            error_text = await response.text()
-            raise Exception(f"Allora API error: {error_text}")
-        
-        return await response.json() 
+        return await self.http_client.post(endpoint, payload)
+
+    async def close(self):
+        """Close the HTTP client"""
+        await self.http_client.close() 

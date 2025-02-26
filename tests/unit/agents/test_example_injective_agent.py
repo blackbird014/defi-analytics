@@ -3,6 +3,7 @@ from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 from src.agents.example_injective_agent import ExampleInjectiveAgent
 from src.config import Config, MarketConfig, RiskParameters
+from src.interfaces.ipredictor import IPredictor
 
 @pytest.fixture
 def mock_config():
@@ -43,17 +44,19 @@ def mock_orderbook():
     }
 
 @pytest.fixture
-def mock_prediction():
-    return {
+def mock_predictor():
+    predictor = AsyncMock(spec=IPredictor)
+    predictor.predict_price_movement.return_value = {
         "predicted_price": 102.0,
         "confidence": 0.95,
         "direction": "up",
         "timestamp": datetime.now()
     }
+    return predictor
 
 @pytest.fixture
-def agent(mock_config, mock_market_config):
-    agent = ExampleInjectiveAgent(mock_config, mock_market_config)
+def agent(mock_config, mock_market_config, mock_predictor):
+    agent = ExampleInjectiveAgent(mock_config, mock_market_config, mock_predictor)
     agent.composer = AsyncMock()
     agent.address = MagicMock()
     agent.address.get_subaccount_id.return_value = "subaccount123"
@@ -86,15 +89,6 @@ async def test_execute_with_valid_prediction(agent, mock_orderbook):
     agent.historical_prices = []
     agent._update_historical_prices = MagicMock()
     
-    # Setup Allora predictor mock
-    agent.allora_predictor = AsyncMock()
-    agent.allora_predictor.predict_price_movement = AsyncMock(return_value={
-        "predicted_price": 102.0,
-        "confidence": 0.95,
-        "direction": "up",
-        "timestamp": datetime.now()
-    })
-    
     # Setup helper method mocks
     agent._get_mid_price = MagicMock(return_value=current_price)
     agent._get_available_liquidity = MagicMock(return_value=1000.0)
@@ -126,18 +120,20 @@ async def test_execute_with_valid_prediction(agent, mock_orderbook):
 
 @pytest.mark.asyncio
 async def test_execute_low_confidence_no_trade(mock_config, mock_market_config, mock_orderbook):
-    agent = ExampleInjectiveAgent(mock_config, mock_market_config)
+    # Create predictor with low confidence
+    low_confidence_predictor = AsyncMock(spec=IPredictor)
+    low_confidence_predictor.predict_price_movement.return_value = {
+        "predicted_price": 102.0,
+        "confidence": 0.5  # Low confidence
+    }
+    
+    agent = ExampleInjectiveAgent(mock_config, mock_market_config, low_confidence_predictor)
     
     # Setup mocks
     agent.get_market_state = AsyncMock(return_value={
         "orderbook": mock_orderbook,
         "timestamp": datetime.now(),
         "market_id": "INJ/USDT"
-    })
-    agent.allora_predictor = AsyncMock()
-    agent.allora_predictor.predict_price_movement = AsyncMock(return_value={
-        "predicted_price": 102.0,
-        "confidence": 0.5  # Low confidence
     })
     agent.place_order = AsyncMock()
     

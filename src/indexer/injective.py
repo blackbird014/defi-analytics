@@ -1,11 +1,12 @@
 from datetime import datetime
 from typing import List, Dict, Any
-from pyinjective.async_client import AsyncClient
+from src.interfaces.iblockchain_client import IBlockchainClient
+from src.blockchain.injective_client import InjectiveClient
 from .interfaces import DataIndexer, PricePoint
 
 class InjectiveIndexer(DataIndexer):
-    def __init__(self, network: str = "mainnet"):
-        self.client = AsyncClient(network)
+    def __init__(self, client: IBlockchainClient = None, network: str = "mainnet"):
+        self.client = client or InjectiveClient(network)
     
     async def get_price_history(
         self, 
@@ -13,15 +14,13 @@ class InjectiveIndexer(DataIndexer):
         start_time: datetime, 
         end_time: datetime
     ) -> List[PricePoint]:
-        """Fetch historical price data from Injective"""
-        # Get raw data from Injective
-        raw_data = await self.client.fetch_spot_market_history(
+        """Fetch historical price data"""
+        raw_data = await self.client.fetch_market_history(
             market_id=token_pair,
-            from_time=int(start_time.timestamp()),
-            to_time=int(end_time.timestamp())
+            from_time=start_time,
+            to_time=end_time
         )
         
-        # Convert to PricePoint objects
         return [
             PricePoint(
                 timestamp=datetime.fromtimestamp(entry["timestamp"]),
@@ -38,8 +37,8 @@ class InjectiveIndexer(DataIndexer):
         self, 
         token_pair: str
     ) -> Dict[str, Any]:
-        """Get liquidity pool information from Injective"""
-        pool_data = await self.client.fetch_spot_market_info(
+        """Get liquidity pool information"""
+        pool_data = await self.client.fetch_market_info(
             market_id=token_pair
         )
         
